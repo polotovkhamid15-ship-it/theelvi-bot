@@ -35,7 +35,7 @@ BOT_TOKEN = os.getenv("BOT_TOKEN", "")
 OWNER_CHAT_ID = int(os.getenv("OWNER_CHAT_ID", "6968841061"))
 PORT = int(os.getenv("PORT", "8080"))
 
-ASK_NAME, ASK_PHONE, ASK_ADDRESS, ASK_PRODUCT = range(4)
+ASK_NAME, ASK_PHONE, async def ask_phone( ASK_PRODUCT = range(4)
 
 
 # =========================
