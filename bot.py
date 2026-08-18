@@ -35,7 +35,40 @@ BOT_TOKEN = os.getenv("BOT_TOKEN", "")
 OWNER_CHAT_ID = int(os.getenv("OWNER_CHAT_ID", "6968841061"))
 PORT = int(os.getenv("PORT", "8080"))
 
-ASK_NAME, ASK_PHONE, async def ask_phone( ASK_PRODUCT = range(4)
+ASK_NAME, ASK_PHONE, async def ask_phone(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+):
+    if update.message.contact:
+        context.user_data["phone"] = update.message.contact.phone_number
+    else:
+        context.user_data["phone"] = update.message.text.strip()
+
+    location_keyboard = ReplyKeyboardMarkup(
+        [
+            [
+                KeyboardButton(
+                    "📍 Lokatsiyani yuborish",
+                    request_location=True
+                )
+            ],
+            [
+                KeyboardButton("✍️ Manzilni yozish")
+            ]
+        ],
+        resize_keyboard=True,
+        one_time_keyboard=True
+    )
+
+    await update.message.reply_text(
+        "3️⃣ Endi manzilingizni yuboring 👇\n\n"
+        "📍 Lokatsiyani yuborish tugmasini bossangiz, "
+        "Telegram xaritadan aniq joylashuvingizni yuboradi.\n\n"
+        "Yoki ✍️ Manzilni yozish tugmasini bosing.",
+        reply_markup=location_keyboard
+    )
+
+    return ASK_ADDRESS ASK_PRODUCT = range(4)
 
 
 # =========================
