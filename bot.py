@@ -35,10 +35,7 @@ BOT_TOKEN = os.getenv("BOT_TOKEN", "")
 OWNER_CHAT_ID = int(os.getenv("OWNER_CHAT_ID", "6968841061"))
 PORT = int(os.getenv("PORT", "8080"))
 
-ASK_PRODUCT = 1
-ASK_NAME = 2
-ASK_PHONE = 3
-ASK_LOCATION = 4
+ASK_PRODUCT, ASK_NAME, ASK_PHONE, ASK_LOCATION = range(4)
 
 
 # =========================
@@ -51,18 +48,6 @@ MAIN_KEYBOARD = ReplyKeyboardMarkup(
         ["📞 Siz bilan bog‘lanmoqchiman"],
         ["💬 Madina bilan chat qilish"],
         ["🚚 Yetkazib berish bormi?"],
-    ],
-    resize_keyboard=True,
-)
-
-
-# =========================
-# RASMiylashtirish menyusi
-# =========================
-
-CANCEL_KEYBOARD = ReplyKeyboardMarkup(
-    [
-        ["❌ Bekor qilish"],
     ],
     resize_keyboard=True,
 )
@@ -111,6 +96,8 @@ async def start(
     context: ContextTypes.DEFAULT_TYPE,
 ):
 
+    context.user_data.clear()
+
     await update.message.reply_text(
         "👋 Assalomu alaykum!\n\n"
         "Men *Madina*, TheElvi konsultantiman 👜✨\n"
@@ -122,7 +109,7 @@ async def start(
 
 
 # =========================
-# 1. SUMKA KERAK EDI
+# 👜 SUMKA KERAK EDI
 # =========================
 
 async def start_order(
@@ -140,8 +127,7 @@ async def start_order(
         "🎀 Kundalik sumka\n"
         "✨ Klassik sumka\n"
         "👜 Kichik sumka\n\n"
-        "Mahsulot nomini yoki qanday sumka kerakligini yozing 👇",
-        reply_markup=CANCEL_KEYBOARD,
+        "Mahsulot nomini yoki qanday sumka kerakligini yozing 👇"
     )
 
     return ASK_PRODUCT
@@ -156,12 +142,6 @@ async def ask_product(
     context: ContextTypes.DEFAULT_TYPE,
 ):
 
-    if update.message.text == "❌ Bekor qilish":
-        return await cancel_order(
-            update,
-            context,
-        )
-
     context.user_data["product"] = (
         update.message.text.strip()
     )
@@ -169,8 +149,7 @@ async def ask_product(
     await update.message.reply_text(
         "Zo‘r tanlov 😊👜\n\n"
         "Zakazingizni rasmiylashtirish uchun "
-        "ismingizni yozib qoldiring 👇",
-        reply_markup=CANCEL_KEYBOARD,
+        "ismingizni yozib qoldiring 👇"
     )
 
     return ASK_NAME
@@ -184,12 +163,6 @@ async def ask_name(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ):
-
-    if update.message.text == "❌ Bekor qilish":
-        return await cancel_order(
-            update,
-            context,
-        )
 
     context.user_data["name"] = (
         update.message.text.strip()
@@ -206,11 +179,6 @@ async def ask_name(
             [
                 KeyboardButton(
                     "✍️ Raqamni yozish"
-                )
-            ],
-            [
-                KeyboardButton(
-                    "❌ Bekor qilish"
                 )
             ],
         ],
@@ -237,12 +205,6 @@ async def ask_phone(
     context: ContextTypes.DEFAULT_TYPE,
 ):
 
-    if update.message.text == "❌ Bekor qilish":
-        return await cancel_order(
-            update,
-            context,
-        )
-
     if update.message.contact:
 
         context.user_data["phone"] = (
@@ -253,8 +215,7 @@ async def ask_phone(
 
         await update.message.reply_text(
             "📱 Telefon raqamingizni yozing:\n\n"
-            "Masalan: +998901234567",
-            reply_markup=CANCEL_KEYBOARD,
+            "Masalan: +998901234567"
         )
 
         return ASK_PHONE
@@ -276,11 +237,6 @@ async def ask_phone(
             [
                 KeyboardButton(
                     "✍️ Manzilni yozish"
-                )
-            ],
-            [
-                KeyboardButton(
-                    "❌ Bekor qilish"
                 )
             ],
         ],
@@ -309,12 +265,6 @@ async def ask_location(
     context: ContextTypes.DEFAULT_TYPE,
 ):
 
-    if update.message.text == "❌ Bekor qilish":
-        return await cancel_order(
-            update,
-            context,
-        )
-
     if update.message.location:
 
         location = update.message.location
@@ -338,8 +288,7 @@ async def ask_location(
         await update.message.reply_text(
             "✍️ Manzilingizni yozing:\n\n"
             "Masalan:\n"
-            "Chilonzor, Bunyodkor ko‘chasi, 15-uy",
-            reply_markup=CANCEL_KEYBOARD,
+            "Chilonzor, Bunyodkor ko‘chasi, 15-uy"
         )
 
         return ASK_LOCATION
@@ -350,7 +299,10 @@ async def ask_location(
             update.message.text.strip()
         )
 
-    # Tasdiqlash
+    # =====================
+    # TASDIQLASH
+    # =====================
+
     product = context.user_data.get(
         "product",
         "-",
@@ -371,7 +323,7 @@ async def ask_location(
         "-",
     )
 
-    confirmation_keyboard = InlineKeyboardMarkup(
+    keyboard = InlineKeyboardMarkup(
         [
             [
                 InlineKeyboardButton(
@@ -381,7 +333,7 @@ async def ask_location(
             ],
             [
                 InlineKeyboardButton(
-                    "❌ Bekor qilish",
+                    "❌ Zakazni bekor qilish",
                     callback_data="cancel_order",
                 )
             ],
@@ -396,7 +348,7 @@ async def ask_location(
         f"📍 Manzil: {address}\n\n"
         "Ma’lumotlar to‘g‘rimi?",
         parse_mode="Markdown",
-        reply_markup=confirmation_keyboard,
+        reply_markup=keyboard,
     )
 
     return ConversationHandler.END
@@ -412,6 +364,7 @@ async def confirm_order(
 ):
 
     query = update.callback_query
+
     await query.answer()
 
     user = query.from_user
@@ -454,14 +407,12 @@ async def confirm_order(
 
     try:
 
-        # Buyurtma ma'lumotlari
         await context.bot.send_message(
             chat_id=OWNER_CHAT_ID,
             text=order_text,
             parse_mode="Markdown",
         )
 
-        # Haqiqiy lokatsiyani yuborish
         if (
             "latitude" in context.user_data
             and "longitude" in context.user_data
@@ -498,7 +449,27 @@ async def confirm_order(
 
 
 # =========================
-# BOG'LANISH
+# ZAKAZNI BEKOR QILISH
+# =========================
+
+async def cancel_order_callback(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+):
+
+    query = update.callback_query
+
+    await query.answer()
+
+    context.user_data.clear()
+
+    await query.edit_message_text(
+        "❌ Zakaz bekor qilindi."
+    )
+
+
+# =========================
+# 📞 BIZ BILAN BOG‘LANISH
 # =========================
 
 async def contact_us(
@@ -524,6 +495,8 @@ async def contact_us(
         one_time_keyboard=True,
     )
 
+    context.user_data["contact_request"] = True
+
     await update.message.reply_text(
         "Albatta 😊\n\n"
         "Siz bilan bog‘lanishimiz uchun "
@@ -531,11 +504,9 @@ async def contact_us(
         reply_markup=phone_keyboard,
     )
 
-    context.user_data["contact_request"] = True
-
 
 # =========================
-# BOG'LANISH TELEFONI
+# 📞 ALOQA RAQAMINI QABUL QILISH
 # =========================
 
 async def receive_contact(
@@ -580,8 +551,7 @@ async def receive_contact(
             chat_id=OWNER_CHAT_ID,
             text=(
                 "📞 *YANGI ALOQA SO‘ROVI!*\n\n"
-                f"👤 Ism: "
-                f"{user.first_name}\n"
+                f"👤 Ism: {user.first_name}\n"
                 f"📱 Telefon: {phone}\n"
                 f"💬 Telegram: {username}\n"
                 f"🆔 ID: {user.id}"
@@ -592,7 +562,7 @@ async def receive_contact(
     except Exception as e:
 
         logger.error(
-            f"Aloqa so‘rovini yuborishda xato: {e}"
+            f"Aloqa yuborishda xato: {e}"
         )
 
     context.user_data.clear()
@@ -606,7 +576,7 @@ async def receive_contact(
 
 
 # =========================
-# MADINA BILAN CHAT
+# 💬 MADINA BILAN CHAT
 # =========================
 
 async def madina_chat(
@@ -618,15 +588,15 @@ async def madina_chat(
         "💬 *Madina bilan chat*\n\n"
         "Albatta 😊 Men shu yerdaman.\n\n"
         "Sizga qanday sumka kerak?\n"
-        "Xohlasangiz narxi, rangi yoki "
-        "modeli haqida so‘rashingiz mumkin. 👜✨",
+        "Xohlasangiz mahsulot, rang yoki "
+        "narxi haqida so‘rashingiz mumkin. 👜✨",
         parse_mode="Markdown",
         reply_markup=MAIN_KEYBOARD,
     )
 
 
 # =========================
-# YETKAZIB BERISH
+# 🚚 YETKAZIB BERISH
 # =========================
 
 async def delivery(
@@ -643,40 +613,6 @@ async def delivery(
         "Zakaz qilish uchun:\n"
         "👜 *Sumka kerak edi* tugmasini bosing.",
         parse_mode="Markdown",
-        reply_markup=MAIN_KEYBOARD,
-    )
-
-
-# =========================
-# BEKOR QILISH
-# =========================
-
-async def cancel_order(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-):
-
-    context.user_data.clear()
-
-    await update.message.reply_text(
-        "❌ Zakaz bekor qilindi.",
-        reply_markup=MAIN_KEYBOARD,
-    )
-
-    return ConversationHandler.END
-
-
-# =========================
-# UNKNOWN
-# =========================
-
-async def unknown(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-):
-
-    await update.message.reply_text(
-        "😊 Quyidagi bo‘limlardan birini tanlang:",
         reply_markup=MAIN_KEYBOARD,
     )
 
@@ -707,7 +643,7 @@ def main():
         f"Health server {PORT}-portda ishga tushdi."
     )
 
-    # Bot
+    # Telegram bot
     app = (
         Application
         .builder()
@@ -771,23 +707,8 @@ def main():
             ],
         },
 
-        fallbacks=[
-            CommandHandler(
-                "bekor",
-                cancel_order,
-            ),
-            MessageHandler(
-                filters.Regex(
-                    r"^❌ Bekor qilish$"
-                ),
-                cancel_order,
-            ),
-        ],
+        fallbacks=[],
     )
-
-    # =====================
-    # HANDLERLAR
-    # =====================
 
     app.add_handler(
         CommandHandler(
@@ -800,7 +721,10 @@ def main():
         order_conversation
     )
 
-    # Tasdiqlash tugmalari
+    # =====================
+    # ZAKAZ TUGMALARI
+    # =====================
+
     app.add_handler(
         CallbackQueryHandler(
             confirm_order,
@@ -810,12 +734,15 @@ def main():
 
     app.add_handler(
         CallbackQueryHandler(
-            cancel_callback,
+            cancel_order_callback,
             pattern=r"^cancel_order$",
         )
     )
 
-    # Bog'lanish
+    # =====================
+    # BOG‘LANISH
+    # =====================
+
     app.add_handler(
         MessageHandler(
             filters.Regex(
@@ -825,7 +752,10 @@ def main():
         )
     )
 
-    # Madina bilan chat
+    # =====================
+    # MADINA CHAT
+    # =====================
+
     app.add_handler(
         MessageHandler(
             filters.Regex(
@@ -835,7 +765,10 @@ def main():
         )
     )
 
-    # Yetkazib berish
+    # =====================
+    # YETKAZIB BERISH
+    # =====================
+
     app.add_handler(
         MessageHandler(
             filters.Regex(
@@ -845,19 +778,26 @@ def main():
         )
     )
 
-    # Aloqa telefonini olish
+    # =====================
+    # ALOQA TELEFONI
+    # =====================
+
     app.add_handler(
         MessageHandler(
             (
                 filters.CONTACT
-                | filters.TEXT
-            )
-            & ~filters.COMMAND,
+                | filters.Regex(
+                    r"^✍️ Raqamni yozish$"
+                )
+            ),
             receive_contact,
         )
     )
 
-    # Unknown
+    # =====================
+    # UNKNOWN
+    # =====================
+
     app.add_handler(
         MessageHandler(
             filters.TEXT
@@ -874,22 +814,17 @@ def main():
 
 
 # =========================
-# CANCEL CALLBACK
+# UNKNOWN
 # =========================
 
-async def cancel_callback(
+async def unknown(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ):
 
-    query = update.callback_query
-
-    await query.answer()
-
-    context.user_data.clear()
-
-    await query.edit_message_text(
-        "❌ Zakaz bekor qilindi."
+    await update.message.reply_text(
+        "😊 Quyidagi bo‘limlardan birini tanlang:",
+        reply_markup=MAIN_KEYBOARD,
     )
 
 
