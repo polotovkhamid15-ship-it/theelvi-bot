@@ -19,9 +19,17 @@ from telegram.ext import (
     filters,
 )
 
-# =========================
+from openai import AsyncOpenAI
+
+
+# ==========================================
 # SOZLAMALAR
-# =========================
+# ==========================================
+
+BOT_TOKEN = os.getenv("BOT_TOKEN", "")
+OWNER_CHAT_ID = int(os.getenv("OWNER_CHAT_ID", "6968841061"))
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+PORT = int(os.getenv("PORT", "8080"))
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -30,16 +38,21 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-BOT_TOKEN = os.getenv("BOT_TOKEN", "")
-OWNER_CHAT_ID = int(os.getenv("OWNER_CHAT_ID", "6968841061"))
-PORT = int(os.getenv("PORT", "8080"))
+client = AsyncOpenAI(
+    api_key=OPENAI_API_KEY
+) if OPENAI_API_KEY else None
+
+
+# ==========================================
+# BOSQICHLAR
+# ==========================================
 
 PRODUCT, NAME, LOCATION, CONFIRM = range(4)
 
 
-# =========================
+# ==========================================
 # ASOSIY MENU
-# =========================
+# ==========================================
 
 MAIN_MENU = ReplyKeyboardMarkup(
     [
@@ -52,17 +65,22 @@ MAIN_MENU = ReplyKeyboardMarkup(
 )
 
 
-# =========================
-# RAILWAY HEALTH
-# =========================
+# ==========================================
+# RAILWAY HEALTH SERVER
+# ==========================================
 
 class HealthHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         self.send_response(200)
-        self.send_header("Content-Type", "text/plain")
+        self.send_header(
+            "Content-Type",
+            "text/plain; charset=utf-8"
+        )
         self.end_headers()
-        self.wfile.write(b"TheElvi Bot is running!")
+        self.wfile.write(
+            b"TheElvi Bot is running!"
+        )
 
     def log_message(self, format, *args):
         pass
@@ -82,9 +100,9 @@ def run_health_server():
     server.serve_forever()
 
 
-# =========================
+# ==========================================
 # START
-# =========================
+# ==========================================
 
 async def start(
     update: Update,
@@ -103,9 +121,9 @@ async def start(
     )
 
 
-# =========================
-# SUMKA KERAK
-# =========================
+# ==========================================
+# SUMKA ZAKAZI
+# ==========================================
 
 async def start_order(
     update: Update,
@@ -130,9 +148,9 @@ async def start_order(
     return PRODUCT
 
 
-# =========================
+# ==========================================
 # MAHSULOT
-# =========================
+# ==========================================
 
 async def product(
     update: Update,
@@ -142,16 +160,16 @@ async def product(
     context.user_data["product"] = update.message.text
 
     await update.message.reply_text(
-        f"Zo‘r tanlov! {update.message.text} 👜✨\n\n"
+        f"Zo‘r tanlov! {update.message.text} 🖤👜\n\n"
         "Endi ismingizni yozing 👇"
     )
 
     return NAME
 
 
-# =========================
+# ==========================================
 # ISM
-# =========================
+# ==========================================
 
 async def name(
     update: Update,
@@ -160,28 +178,31 @@ async def name(
 
     context.user_data["name"] = update.message.text
 
+    location_keyboard = ReplyKeyboardMarkup(
+        [
+            [
+                KeyboardButton(
+                    "📍 Lokatsiyani yuborish",
+                    request_location=True
+                )
+            ]
+        ],
+        resize_keyboard=True
+    )
+
     await update.message.reply_text(
         "Rahmat 😊\n\n"
-        "Endi yetkazib berish uchun lokatsiyangizni yuboring 👇",
-        reply_markup=ReplyKeyboardMarkup(
-            [
-                [
-                    KeyboardButton(
-                        "📍 Lokatsiyani yuborish",
-                        request_location=True
-                    )
-                ]
-            ],
-            resize_keyboard=True
-        )
+        "Endi yetkazib berish uchun "
+        "lokatsiyangizni yuboring 👇",
+        reply_markup=location_keyboard
     )
 
     return LOCATION
 
 
-# =========================
+# ==========================================
 # LOKATSIYA
-# =========================
+# ==========================================
 
 async def location(
     update: Update,
@@ -230,9 +251,9 @@ async def location(
     return CONFIRM
 
 
-# =========================
+# ==========================================
 # ZAKAZNI TASDIQLASH
-# =========================
+# ==========================================
 
 async def confirm(
     update: Update,
@@ -252,7 +273,7 @@ async def confirm(
     )
 
     order_text = (
-        "🆕 *YANGI ZAKAZ!*\n\n"
+        "🆕 *YANGI THEELVI ZAKAZ!*\n\n"
         f"👤 Ism: {data.get('name')}\n"
         f"👜 Mahsulot: {data.get('product')}\n"
         f"📍 Manzil: {data.get('location')}\n\n"
@@ -276,8 +297,6 @@ async def confirm(
                 longitude=data["longitude"]
             )
 
-        logger.info("Zakaz egasiga yuborildi.")
-
     except Exception as e:
 
         logger.error(
@@ -297,9 +316,9 @@ async def confirm(
     return ConversationHandler.END
 
 
-# =========================
-# BIZ BILAN BOG‘LANISH
-# =========================
+# ==========================================
+# TELEFON QILISH
+# ==========================================
 
 async def contact(
     update: Update,
@@ -318,34 +337,76 @@ async def contact(
     )
 
     await update.message.reply_text(
-        "📞 Biz bilan bog‘lanish uchun "
+        "Albatta 😊\n\n"
+        "Biz bilan bog‘lanish uchun "
         "quyidagi raqamni bosing 👇",
         reply_markup=keyboard
     )
 
 
-# =========================
-# MADINA BILAN CHAT
-# =========================
+# ==========================================
+# MADINA AI
+# ==========================================
 
-async def madina(
+async def ai_chat(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
 
-    await update.message.reply_text(
-        "💬 *Madina bilan chat*\n\n"
-        "Albatta 😊 Men shu yerdaman!\n\n"
-        "Qanday sumka qidiryapsiz?\n"
-        "Savolingizni bemalol yozing 👜✨",
-        parse_mode="Markdown",
-        reply_markup=MAIN_MENU
-    )
+    if not client:
+
+        await update.message.reply_text(
+            "😊 Madina AI hozircha sozlanmoqda.\n\n"
+            "📞 Biz bilan bog‘lanish:\n"
+            "+998 90 708 00 23"
+        )
+
+        return
+
+    user_message = update.message.text
+
+    try:
+
+        response = await client.responses.create(
+            model="gpt-5-mini",
+
+            instructions=(
+                "Sen Madina ismli TheElvi online do‘konining "
+                "muloyim va professional konsultantisan. "
+                "Asosan ayollar sumkalari haqida yordam berasan. "
+                "Mijoz bilan o‘zbek tilida, sodda va chiroyli "
+                "gaplash. Javoblarni juda uzun qilma. "
+                "Agar mahsulot yoki narx haqida aniq ma’lumot "
+                "berilmagan bo‘lsa, narxni o‘ylab topma. "
+                "Mijoz zakaz qilmoqchi bo‘lsa, uni zakaz "
+                "jarayoniga yo‘naltir."
+            ),
+
+            input=user_message
+        )
+
+        answer = response.output_text
+
+        await update.message.reply_text(
+            answer
+        )
+
+    except Exception as e:
+
+        logger.error(
+            f"AI xatosi: {e}"
+        )
+
+        await update.message.reply_text(
+            "Kechirasiz 😊 Hozircha javob berishda "
+            "kichik texnik muammo bo‘ldi.\n\n"
+            "📞 +998 90 708 00 23"
+        )
 
 
-# =========================
+# ==========================================
 # YETKAZIB BERISH
-# =========================
+# ==========================================
 
 async def delivery(
     update: Update,
@@ -362,23 +423,26 @@ async def delivery(
     )
 
 
-# =========================
+# ==========================================
 # MAIN
-# =========================
+# ==========================================
 
 def main():
 
     if not BOT_TOKEN:
 
-        logger.error("BOT_TOKEN topilmadi!")
+        logger.error(
+            "BOT_TOKEN topilmadi!"
+        )
+
         return
 
-    thread = threading.Thread(
+    health_thread = threading.Thread(
         target=run_health_server,
         daemon=True
     )
 
-    thread.start()
+    health_thread.start()
 
     app = (
         Application
@@ -433,7 +497,10 @@ def main():
     )
 
     app.add_handler(
-        CommandHandler("start", start)
+        CommandHandler(
+            "start",
+            start
+        )
     )
 
     app.add_handler(
@@ -454,7 +521,7 @@ def main():
             filters.Regex(
                 r"^💬 Madina bilan chat qilish$"
             ),
-            madina
+            ai_chat
         )
     )
 
@@ -467,14 +534,20 @@ def main():
         )
     )
 
-    logger.info("TheElvi bot ishga tushdi!")
+    # AI chat uchun oddiy yozilgan xabarlar
+    app.add_handler(
+        MessageHandler(
+            filters.TEXT & ~filters.COMMAND,
+            ai_chat
+        )
+    )
+
+    logger.info(
+        "TheElvi AI Bot ishga tushdi!"
+    )
 
     app.run_polling()
 
-
-# =========================
-# ISHGA TUSHIRISH
-# =========================
 
 if __name__ == "__main__":
     main()
